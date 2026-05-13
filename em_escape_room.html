@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EM Escape Room</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#fafaf8;color:#1a1a1a;font-family:'Nunito',sans-serif;min-height:100vh;}
+
+/* HEADER */
+header{position:fixed;top:0;left:0;right:0;z-index:99;background:#fafaf8;border-bottom:1px solid #e8e8e4;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.logo{font-size:16px;font-weight:800;color:#1a1a1a;}
+.logo span{color:#5c7cfa;}
+.hud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.hud-pill{background:#f0f3ff;border:1px solid #d0d9ff;color:#3a54c4;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+.hud-pill.red{background:#fff0f0;border-color:#ffc9c9;color:#c92a2a;}
+.hud-pill.green{background:#f0fbf4;border-color:#b2f2c9;color:#2f9e44;}
+.timer-wrap{display:flex;align-items:center;gap:6px;}
+.timer-icon{font-size:14px;}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;padding:76px 20px 60px;}
+.screen.active{display:flex;align-items:center;justify-content:center;}
+.wrap{max-width:660px;width:100%;margin:0 auto;}
+
+/* INTRO */
+.intro-card{background:#fff;border:1px solid #e8e8e4;border-radius:16px;padding:36px 32px;text-align:center;}
+.room-number{font-size:11px;font-weight:800;letter-spacing:.12em;color:#5c7cfa;text-transform:uppercase;margin-bottom:10px;}
+h1{font-size:clamp(26px,4vw,36px);font-weight:800;line-height:1.2;margin-bottom:10px;}
+h2{font-size:20px;font-weight:800;margin-bottom:8px;}
+h3{font-size:15px;font-weight:700;margin-bottom:6px;}
+p{font-size:14px;color:#555;line-height:1.75;}
+
+/* ROOM */
+.room{background:#fff;border:1px solid #e8e8e4;border-radius:16px;padding:28px 24px;margin-bottom:16px;}
+.room-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.room-icon{font-size:28px;}
+.clue-box{background:#f5f5f2;border-radius:10px;padding:14px 16px;margin-bottom:18px;border-left:3px solid #5c7cfa;}
+.clue-box p{font-size:13px;color:#333;line-height:1.7;}
+.clue-label{font-size:10px;font-weight:800;letter-spacing:.1em;color:#5c7cfa;margin-bottom:6px;}
+
+/* PUZZLE ELEMENTS */
+.puzzle-area{margin-bottom:18px;}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.opt{display:block;width:100%;text-align:left;background:#fafaf8;border:1.5px solid #e8e8e4;border-radius:10px;padding:11px 14px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;transition:all .2s;}
+.opt:hover{border-color:#5c7cfa;background:#f0f3ff;}
+.opt.correct{border-color:#2f9e44!important;background:#f0fbf4!important;color:#2f9e44!important;}
+.opt.wrong{border-color:#e03131!important;background:#fff0f0!important;color:#e03131!important;}
+.opt:disabled{cursor:default;}
+
+/* INPUT PUZZLE */
+.input-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.code-input{background:#f5f5f2;border:1.5px solid #e0e0dc;border-radius:10px;padding:10px 14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:700;color:#1a1a1a;outline:none;width:140px;text-align:center;letter-spacing:.1em;transition:border .2s;}
+.code-input:focus{border-color:#5c7cfa;}
+
+/* DRAG AND DROP */
+.drag-area{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;min-height:44px;background:#f5f5f2;border-radius:10px;padding:8px;border:1.5px dashed #d0d0cc;}
+.drag-item{background:#fff;border:1.5px solid #e0e0dc;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:grab;transition:all .2s;user-select:none;}
+.drag-item:hover{border-color:#5c7cfa;background:#f0f3ff;}
+.drag-item.dragging{opacity:0.4;}
+.drop-zone{background:#f5f5f2;border:1.5px dashed #d0d0cc;border-radius:10px;padding:8px;min-height:44px;display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;transition:border .2s;}
+.drop-zone.over{border-color:#5c7cfa;background:#f0f3ff;}
+.drop-label{font-size:11px;font-weight:700;color:#888;margin-bottom:4px;}
+
+/* SPECTRUM SLIDER */
+.spec-bar{display:flex;border-radius:10px;overflow:hidden;height:44px;margin-bottom:10px;}
+.seg{flex:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.9);cursor:pointer;transition:all .2s;text-align:center;}
+.seg:hover,.seg.picked{flex:1.6;font-size:11px;outline:3px solid #1a1a1a;outline-offset:-3px;}
+
+/* FEEDBACK */
+.feedback{border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;margin-top:12px;display:none;}
+.feedback.show{display:block;}
+.feedback.ok{background:#f0fbf4;color:#2f9e44;border:1px solid #b2f2c9;}
+.feedback.bad{background:#fff0f0;color:#c92a2a;border:1px solid #ffc9c9;}
+
+/* DOOR */
+.door{text-align:center;padding:20px;background:#f5f5f2;border-radius:12px;border:1.5px dashed #d0d0cc;}
+.door.unlocked{background:#f0fbf4;border-color:#b2f2c9;border-style:solid;}
+.door-emoji{font-size:36px;margin-bottom:8px;}
+.door p{font-size:13px;color:#888;}
+.door.unlocked p{color:#2f9e44;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 24px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .2s;}
+.btn-p{background:#5c7cfa;color:#fff;}
+.btn-p:hover{background:#4c6ef5;}
+.btn-o{background:#fff;color:#555;border:1.5px solid #e0e0dc;}
+.btn-o:hover{border-color:#5c7cfa;color:#5c7cfa;}
+.btn:disabled{opacity:.4;cursor:default;}
+
+/* WIN SCREEN */
+.win-card{background:#fff;border:1px solid #e8e8e4;border-radius:16px;padding:40px 28px;text-align:center;}
+.win-score{font-size:52px;font-weight:800;color:#5c7cfa;margin-bottom:4px;}
+.star{font-size:28px;}
+.badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;margin:10px 0;}
+
+/* PENALTY FLASH */
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.shake{animation:shake .3s ease;}
+
+/* SPECTRA CANVAS */
+canvas{display:block;border-radius:8px;}
+
+/* PROGRESS BAR */
+.progress-track{height:6px;background:#e8e8e4;border-radius:3px;margin-bottom:20px;}
+.progress-fill{height:6px;background:#5c7cfa;border-radius:3px;transition:width .5s;}
+
+/* INFO BOX */
+.info{background:#f0f3ff;border-radius:10px;padding:12px 14px;margin-bottom:14px;border-left:3px solid #5c7cfa;}
+.info p{font-size:13px;color:#333;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">EM <span>Escape</span></div>
+  <div class="hud">
+    <div class="hud-pill timer-wrap"><span class="timer-icon">⏱</span><span id="timerDisplay">00:00</span></div>
+    <div class="hud-pill green" id="scoreDisplay">0 pts</div>
+    <div class="hud-pill" id="roomDisplay">Room 0/6</div>
+  </div>
+</header>
+
+<!-- ===== INTRO ===== -->
+<div id="s0" class="screen active">
+<div class="wrap">
+  <div class="intro-card">
+    <div style="font-size:48px;margin-bottom:16px;">🔬</div>
+    <div class="room-number">Physics Escape Room</div>
+    <h1>EM Wave Lab<br>Escape Room</h1>
+    <p style="max-width:420px;margin:12px auto 24px;">You're locked inside a physics lab. The only way out is to prove you understand electromagnetic waves. Solve each room's puzzle to unlock the next door — and eventually escape!</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
+      <div style="background:#f5f5f2;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#555;">6 rooms to escape</div>
+      <div style="background:#f5f5f2;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#555;">Wrong answers = time penalty</div>
+      <div style="background:#f5f5f2;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#555;">Fastest time wins</div>
+    </div>
+    <button class="btn btn-p" style="font-size:15px;padding:13px 32px;" onclick="startGame()">Enter the lab →</button>
+  </div>
+</div>
+</div>
+
+<!-- ===== ROOM 1: THE LAB (Nature of EM waves) ===== -->
+<div id="s1" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" style="width:0%" id="p1"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">🔬</div>
+      <div><div class="room-number">Room 1 of 6</div><h2>The Lab</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>On the wall, a poster reads: <em>"I am a disturbance made of two fields at right angles to each other. I need no air, no water, no material to travel. I move at 300,000 km per second. I am everywhere — in your phone, in your microwave, in sunlight. What am I?"</em></p>
+    </div>
+    <div class="puzzle-area">
+      <h3 style="margin-bottom:10px;">What is the poster describing?</h3>
+      <div class="options-grid">
+        <button class="opt" onclick="r1ans(0)">A sound wave</button>
+        <button class="opt" onclick="r1ans(1)">An electromagnetic wave</button>
+        <button class="opt" onclick="r1ans(2)">A water wave</button>
+        <button class="opt" onclick="r1ans(3)">A mechanical wave</button>
+      </div>
+    </div>
+    <div class="feedback" id="r1fb"></div>
+    <div class="info" id="r1info" style="display:none;">
+      <p>✅ <strong>EM waves</strong> are oscillating electric and magnetic fields that travel through a vacuum at c = 3×10⁸ m/s. Unlike sound, they need no medium — that's why light from the Sun can cross empty space to reach us.</p>
+    </div>
+    <div class="door" id="r1door">
+      <div class="door-emoji">🔒</div>
+      <p>Solve the puzzle to unlock the door</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r1next" style="display:none;" onclick="goTo(2)">Next room →</button></div>
+</div>
+</div>
+
+<!-- ===== ROOM 2: THE SIGNAL ROOM (EM Spectrum categories) ===== -->
+<div id="s2" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" id="p2"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">📡</div>
+      <div><div class="room-number">Room 2 of 6</div><h2>The Signal Room</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>A broken radio is on the desk. A note says: <em>"To fix the radio, you must tune it to the correct signal. Match each description to the right type of EM wave. Get all 3 right to restore power."</em></p>
+    </div>
+
+    <div class="puzzle-area" id="r2puzzle">
+      <div id="r2q" style="background:#f5f5f2;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:800;color:#888;letter-spacing:.08em;margin-bottom:6px;">SIGNAL <span id="r2num">1</span> OF 3</div>
+        <p id="r2desc" style="font-size:14px;font-weight:600;color:#1a1a1a;"></p>
+      </div>
+      <div class="options-grid" id="r2opts"></div>
+    </div>
+    <div class="feedback" id="r2fb"></div>
+    <div class="info" id="r2info" style="display:none;">
+      <p>✅ The EM spectrum spans from <strong>radio waves</strong> (longest wavelength, lowest energy) all the way to <strong>gamma rays</strong> (shortest wavelength, highest energy). In order: Radio → Microwave → Infrared → Visible → UV → X-ray → Gamma.</p>
+    </div>
+    <div class="door" id="r2door">
+      <div class="door-emoji">🔒</div>
+      <p>Match all 3 signals correctly to unlock</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r2next" style="display:none;" onclick="goTo(3)">Next room →</button></div>
+</div>
+</div>
+
+<!-- ===== ROOM 3: THE ENERGY CHAMBER (c=fλ and E=hf) ===== -->
+<div id="s3" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" id="p3"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">⚡</div>
+      <div><div class="room-number">Room 3 of 6</div><h2>The Energy Chamber</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>The door has a 4-digit keypad. A whiteboard reads: <em>"A wave has a frequency of 5×10¹⁴ Hz. The speed of light is 3×10⁸ m/s. Find the wavelength in nanometres and enter it as a whole number. (1 m = 10⁹ nm)"</em></p>
+    </div>
+    <div class="info">
+      <p>💡 <strong>Hint:</strong> Use c = f × λ, so λ = c ÷ f. Then convert metres to nanometres by multiplying by 10⁹.</p>
+    </div>
+    <div class="puzzle-area">
+      <h3 style="margin-bottom:10px;">Enter the wavelength (in nm):</h3>
+      <div class="input-row">
+        <input class="code-input" type="number" id="r3input" placeholder="_ _ _" maxlength="4">
+        <button class="btn btn-p" onclick="r3check()">Submit code</button>
+      </div>
+    </div>
+    <div class="feedback" id="r3fb"></div>
+    <div class="info" id="r3info" style="display:none;">
+      <p>✅ λ = c ÷ f = (3×10⁸) ÷ (5×10¹⁴) = 6×10⁻⁷ m = <strong>600 nm</strong>. This is in the visible light range (orange-red light). The relationship c = fλ shows that higher frequency means shorter wavelength.</p>
+    </div>
+    <div class="door" id="r3door">
+      <div class="door-emoji">🔒</div>
+      <p>Enter the correct code to unlock</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r3next" style="display:none;" onclick="goTo(4)">Next room →</button></div>
+</div>
+</div>
+
+<!-- ===== ROOM 4: THE SPECTRA VAULT (Absorption & emission) ===== -->
+<div id="s4" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" id="p4"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">🌈</div>
+      <div><div class="room-number">Room 4 of 6</div><h2>The Spectra Vault</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>Three locked containers each hold part of the vault key. Each container is labelled with a spectra clue. Answer all three to collect all key parts.</p>
+    </div>
+
+    <div id="r4puzzle">
+      <div id="r4q" style="background:#f5f5f2;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:800;color:#888;letter-spacing:.08em;margin-bottom:6px;">KEY PART <span id="r4num">1</span> OF 3</div>
+        <p id="r4desc" style="font-size:14px;font-weight:600;color:#1a1a1a;"></p>
+        <canvas id="r4cv" style="width:100%;height:60px;margin-top:10px;border-radius:6px;"></canvas>
+      </div>
+      <div class="options-grid" id="r4opts"></div>
+    </div>
+    <div class="feedback" id="r4fb"></div>
+    <div class="info" id="r4info" style="display:none;">
+      <p>✅ <strong>Emission spectra</strong> show bright coloured lines on a black background — electrons releasing energy as photons. <strong>Absorption spectra</strong> show dark lines on a rainbow — electrons absorbing specific photons to jump to higher energy levels. Every element has a unique spectral fingerprint.</p>
+    </div>
+    <div class="door" id="r4door">
+      <div class="door-emoji">🔒</div>
+      <p>Collect all 3 key parts to unlock the vault</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r4next" style="display:none;" onclick="goTo(5)">Next room →</button></div>
+</div>
+</div>
+
+<!-- ===== ROOM 5: THE OBSERVATORY (Applications) ===== -->
+<div id="s5" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" id="p5"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">🔭</div>
+      <div><div class="room-number">Room 5 of 6</div><h2>The Observatory</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>Five devices are lined up on a shelf. Each one uses a different type of EM wave. Identify the correct wave type for each device — all 5 must be correct to open the telescope hatch.</p>
+    </div>
+
+    <div id="r5puzzle">
+      <div id="r5q" style="background:#f5f5f2;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:800;color:#888;letter-spacing:.08em;margin-bottom:6px;">DEVICE <span id="r5num">1</span> OF 5</div>
+        <div style="font-size:20px;margin-bottom:6px;" id="r5icon"></div>
+        <p id="r5desc" style="font-size:14px;font-weight:600;color:#1a1a1a;"></p>
+      </div>
+      <div class="options-grid" id="r5opts"></div>
+    </div>
+    <div class="feedback" id="r5fb"></div>
+    <div class="info" id="r5info" style="display:none;">
+      <p>✅ Each type of EM wave has unique properties that make it useful for specific applications — from the long wavelengths of radio waves used in broadcasting, to the penetrating power of X-rays in medicine, to the high energy of gamma rays used in cancer treatment.</p>
+    </div>
+    <div class="door" id="r5door">
+      <div class="door-emoji">🔒</div>
+      <p>Identify all 5 devices to open the hatch</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r5next" style="display:none;" onclick="goTo(6)">Final room →</button></div>
+</div>
+</div>
+
+<!-- ===== ROOM 6: THE QUANTUM DOOR (Wave-particle duality) ===== -->
+<div id="s6" class="screen">
+<div class="wrap">
+  <div class="progress-track"><div class="progress-fill" id="p6"></div></div>
+  <div class="room">
+    <div class="room-header">
+      <div class="room-icon">⚛️</div>
+      <div><div class="room-number">Room 6 of 6 — Final Room</div><h2>The Quantum Door</h2></div>
+    </div>
+    <div class="clue-box">
+      <div class="clue-label">📋 YOUR CLUE</div>
+      <p>The final door has three locks. Each one requires knowledge of wave-particle duality. Answer all three correctly to escape the lab!</p>
+    </div>
+
+    <div id="r6puzzle">
+      <div id="r6q" style="background:#f5f5f2;border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:800;color:#888;letter-spacing:.08em;margin-bottom:6px;">LOCK <span id="r6num">1</span> OF 3</div>
+        <p id="r6desc" style="font-size:14px;font-weight:600;color:#1a1a1a;"></p>
+      </div>
+      <div class="options-grid" id="r6opts"></div>
+    </div>
+    <div class="feedback" id="r6fb"></div>
+    <div class="info" id="r6info" style="display:none;">
+      <p>✅ <strong>Wave-particle duality</strong> means light behaves as both. Evidence for waves: diffraction, interference (double-slit). Evidence for particles: photoelectric effect (Einstein, 1905). De Broglie showed every particle has a wavelength: λ = h/p.</p>
+    </div>
+    <div class="door" id="r6door">
+      <div class="door-emoji">🔒</div>
+      <p>Unlock all 3 locks to escape!</p>
+    </div>
+  </div>
+  <div style="text-align:right;"><button class="btn btn-p" id="r6next" style="display:none;" onclick="showWin()">🚪 Escape! →</button></div>
+</div>
+</div>
+
+<!-- ===== WIN SCREEN ===== -->
+<div id="sWin" class="screen">
+<div class="wrap">
+  <div class="win-card">
+    <div style="font-size:52px;margin-bottom:12px;">🎉</div>
+    <div class="room-number">You escaped!</div>
+    <h1 style="margin-bottom:6px;">Lab Cleared!</h1>
+    <p style="margin-bottom:20px;">You solved all 6 rooms and escaped the EM Wave Lab.</p>
+    <div class="win-score" id="winScore">0</div>
+    <div style="font-size:14px;color:#888;margin-bottom:6px;">points</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Time: <span id="winTime" style="color:#5c7cfa;"></span></div>
+    <div class="badge" id="winBadge"></div>
+    <hr style="border:none;border-top:1px solid #e8e8e4;margin:20px 0;">
+    <h3 style="margin-bottom:12px;">What you proved you know:</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin-bottom:24px;">
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">🔬 Nature of EM waves</div>
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">📡 The EM spectrum</div>
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">⚡ Wave equations</div>
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">🌈 Spectra</div>
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">🔭 Applications</div>
+      <div style="background:#f5f5f2;border-radius:8px;padding:10px;font-size:12px;font-weight:600;">⚛️ Wave-particle duality</div>
+    </div>
+    <button class="btn btn-p" onclick="restartGame()" style="font-size:14px;">Play again</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ── TIMER & SCORE ──────────────────────────────────────────────
+let startTime, timerInterval, totalScore=0, penalties=0;
+
+function startTimer(){
+  startTime=Date.now();
+  timerInterval=setInterval(()=>{
+    const s=Math.floor((Date.now()-startTime)/1000);
+    const m=Math.floor(s/60), sec=s%60;
+    document.getElementById('timerDisplay').textContent=
+      String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  },500);
+}
+function getElapsed(){return Math.floor((Date.now()-startTime)/1000);}
+function addPenalty(){
+  penalties+=15;
+  const d=document.getElementById('timerDisplay');
+  d.parentElement.classList.add('red');
+  d.textContent='⚠️ +15s';
+  setTimeout(()=>{d.parentElement.classList.remove('red');},800);
+}
+function addScore(pts){
+  totalScore+=pts;
+  document.getElementById('scoreDisplay').textContent=totalScore+' pts';
+}
+
+// ── NAV ────────────────────────────────────────────────────────
+function startGame(){
+  startTimer();
+  goTo(1);
+  document.getElementById('roomDisplay').style.display='flex';
+}
+function goTo(n){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s'+n).classList.add('active');
+  document.getElementById('roomDisplay').textContent='Room '+n+'/6';
+  const pct=(n-1)/6*100;
+  const pb=document.getElementById('p'+n);
+  if(pb)setTimeout(()=>pb.style.width=pct+'%',100);
+  window.scrollTo(0,0);
+  if(n===2)initR2();
+  if(n===4)initR4();
+  if(n===5)initR5();
+  if(n===6)initR6();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function showFeedback(id,ok,msg){
+  const el=document.getElementById(id);
+  el.className='feedback show '+(ok?'ok':'bad');
+  el.textContent=msg;
+}
+function unlockDoor(id,nextId){
+  const d=document.getElementById(id);
+  d.className='door unlocked';
+  d.innerHTML='<div class="door-emoji">🔓</div><p>Door unlocked! Move to the next room.</p>';
+  if(nextId)document.getElementById(nextId).style.display='inline-flex';
+}
+
+// ── ROOM 1 ────────────────────────────────────────────────────
+function r1ans(i){
+  document.querySelectorAll('#s1 .opt').forEach(b=>b.disabled=true);
+  if(i===1){
+    document.querySelectorAll('#s1 .opt')[1].classList.add('correct');
+    showFeedback('r1fb',true,'✅ Correct! +20 points');
+    addScore(20);
+    document.getElementById('r1info').style.display='block';
+    unlockDoor('r1door','r1next');
+  } else {
+    document.querySelectorAll('#s1 .opt')[i].classList.add('wrong');
+    document.querySelectorAll('#s1 .opt')[1].classList.add('correct');
+    showFeedback('r1fb',false,'❌ Not quite — the answer is highlighted. Time penalty: +15s');
+    addPenalty();
+    document.getElementById('r1info').style.display='block';
+    unlockDoor('r1door','r1next');
+  }
+}
+
+// ── ROOM 2 ────────────────────────────────────────────────────
+const r2qs=[
+  {desc:'Used in MRI machines. Longest wavelength, passes through walls easily.',ans:0,opts:['Radio waves','Gamma rays','UV rays','X-rays']},
+  {desc:'Causes sunburn. Blocked by sunscreen. Shorter wavelength than visible light.',ans:1,opts:['Infrared','Ultraviolet','Microwaves','Radio waves']},
+  {desc:'Used in medical imaging. Penetrates soft tissue but not bone.',ans:2,opts:['Gamma rays','Microwaves','X-rays','Visible light']},
+];
+let r2idx=0, r2correct=0;
+
+function initR2(){r2idx=0;r2correct=0;renderR2();}
+function renderR2(){
+  if(r2idx>=r2qs.length)return;
+  const q=r2qs[r2idx];
+  document.getElementById('r2num').textContent=r2idx+1;
+  document.getElementById('r2desc').textContent=q.desc;
+  const og=document.getElementById('r2opts');
+  og.innerHTML=q.opts.map((o,i)=>`<button class="opt" onclick="r2ans(${i})">${o}</button>`).join('');
+}
+function r2ans(i){
+  const q=r2qs[r2idx];
+  document.querySelectorAll('#r2opts .opt').forEach(b=>b.disabled=true);
+  if(i===q.ans){
+    document.querySelectorAll('#r2opts .opt')[i].classList.add('correct');
+    showFeedback('r2fb',true,'✅ Correct! +15 points');
+    addScore(15);r2correct++;
+  } else {
+    document.querySelectorAll('#r2opts .opt')[i].classList.add('wrong');
+    document.querySelectorAll('#r2opts .opt')[q.ans].classList.add('correct');
+    showFeedback('r2fb',false,'❌ Wrong — +15s penalty');
+    addPenalty();
+  }
+  setTimeout(()=>{
+    r2idx++;
+    document.getElementById('r2fb').className='feedback';
+    if(r2idx<r2qs.length){renderR2();}
+    else{
+      document.getElementById('r2info').style.display='block';
+      unlockDoor('r2door','r2next');
+    }
+  },1200);
+}
+
+// ── ROOM 3 ────────────────────────────────────────────────────
+function r3check(){
+  const val=parseInt(document.getElementById('r3input').value);
+  if(val===600){
+    showFeedback('r3fb',true,'✅ Correct! 600 nm — that\'s orange-red visible light. +25 points');
+    addScore(25);
+    document.getElementById('r3info').style.display='block';
+    unlockDoor('r3door','r3next');
+  } else {
+    showFeedback('r3fb',false,'❌ Not quite. Check your calculation: λ = c ÷ f. Time penalty: +15s');
+    addPenalty();
+    const box=document.querySelector('.room');
+    box.classList.add('shake');
+    setTimeout(()=>box.classList.remove('shake'),400);
+  }
+}
+
+// ── ROOM 4 ────────────────────────────────────────────────────
+const r4qs=[
+  {desc:'This spectrum shows bright coloured lines on a completely black background. What type of spectrum is it?',type:'emission',ans:0,opts:['Emission spectrum','Absorption spectrum','Continuous spectrum','Solar spectrum']},
+  {desc:'When white light passes through hydrogen gas, some wavelengths are missing, leaving dark lines on a rainbow. What is this called?',type:'absorption',ans:1,opts:['Emission spectrum','Absorption spectrum','Line spectrum','X-ray spectrum']},
+  {desc:'Scientists identify distant stars by analysing their dark spectral lines. What does each element\'s unique pattern of lines represent?',type:'both',ans:2,opts:['Its temperature','Its distance from Earth','Its atomic fingerprint','Its size']},
+];
+let r4idx=0;
+
+function initR4(){r4idx=0;renderR4();}
+function wl2rgb(wl){
+  let r=0,g=0,b=0;
+  if(wl>=380&&wl<440){r=(440-wl)/60;b=1;}else if(wl>=440&&wl<490){g=(wl-440)/50;b=1;}
+  else if(wl>=490&&wl<510){g=1;b=(510-wl)/20;}else if(wl>=510&&wl<580){r=(wl-510)/70;g=1;}
+  else if(wl>=580&&wl<645){r=1;g=(645-wl)/65;}else if(wl>=645){r=1;}
+  return`rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+}
+function drawR4Canvas(type){
+  const cv=document.getElementById('r4cv');
+  const ctx=cv.getContext('2d');
+  cv.width=cv.offsetWidth*devicePixelRatio;cv.height=cv.offsetHeight*devicePixelRatio;
+  ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w=cv.offsetWidth,h=cv.offsetHeight;
+  const hLines=[410,434,486,656];
+  if(type==='emission'){
+    ctx.fillStyle='#111';ctx.fillRect(0,0,w,h);
+    hLines.forEach(wl=>{
+      const x=((wl-380)/400)*w;
+      ctx.strokeStyle=wl2rgb(wl);ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();
+    });
+  } else if(type==='absorption'){
+    for(let x=0;x<w;x++){ctx.fillStyle=wl2rgb(380+(x/w)*400);ctx.fillRect(x,0,1,h);}
+    hLines.forEach(wl=>{
+      const x=((wl-380)/400)*w;
+      ctx.strokeStyle='rgba(0,0,0,0.9)';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();
+    });
+  } else {
+    for(let x=0;x<w;x++){ctx.fillStyle=wl2rgb(380+(x/w)*400);ctx.fillRect(x,0,1,h);}
+  }
+}
+function renderR4(){
+  if(r4idx>=r4qs.length)return;
+  const q=r4qs[r4idx];
+  document.getElementById('r4num').textContent=r4idx+1;
+  document.getElementById('r4desc').textContent=q.desc;
+  setTimeout(()=>drawR4Canvas(q.type),50);
+  const og=document.getElementById('r4opts');
+  og.innerHTML=q.opts.map((o,i)=>`<button class="opt" onclick="r4ans(${i})">${o}</button>`).join('');
+}
+function r4ans(i){
+  const q=r4qs[r4idx];
+  document.querySelectorAll('#r4opts .opt').forEach(b=>b.disabled=true);
+  if(i===q.ans){
+    document.querySelectorAll('#r4opts .opt')[i].classList.add('correct');
+    showFeedback('r4fb',true,'✅ Correct! +15 points');
+    addScore(15);
+  } else {
+    document.querySelectorAll('#r4opts .opt')[i].classList.add('wrong');
+    document.querySelectorAll('#r4opts .opt')[q.ans].classList.add('correct');
+    showFeedback('r4fb',false,'❌ Wrong — +15s penalty');
+    addPenalty();
+  }
+  setTimeout(()=>{
+    r4idx++;
+    document.getElementById('r4fb').className='feedback';
+    if(r4idx<r4qs.length){renderR4();}
+    else{
+      document.getElementById('r4info').style.display='block';
+      unlockDoor('r4door','r4next');
+    }
+  },1200);
+}
+
+// ── ROOM 5 ────────────────────────────────────────────────────
+const r5qs=[
+  {icon:'📻',desc:'A radio station transmits music across the city. Which EM wave carries the signal?',ans:0,opts:['Radio waves','Microwaves','Infrared','UV rays']},
+  {icon:'🍕',desc:'A pizza rotates inside a box as its water molecules vibrate to heat up. What wave is being used?',ans:1,opts:['Radio waves','Microwaves','Gamma rays','X-rays']},
+  {icon:'🏥',desc:'A doctor takes an image to check for a broken bone. The wave passes through soft tissue but not through dense bone.',ans:2,opts:['UV rays','Infrared','X-rays','Gamma rays']},
+  {icon:'🌡️',desc:'A thermal camera detects heat given off by a person\'s body, even in complete darkness.',ans:1,opts:['Visible light','Infrared','Microwaves','Radio waves']},
+  {icon:'🔬',desc:'A hospital uses high-energy radiation to destroy cancer cells in a tumour.',ans:3,opts:['X-rays','UV rays','Microwaves','Gamma rays']},
+];
+let r5idx=0;
+
+function initR5(){r5idx=0;renderR5();}
+function renderR5(){
+  if(r5idx>=r5qs.length)return;
+  const q=r5qs[r5idx];
+  document.getElementById('r5num').textContent=r5idx+1;
+  document.getElementById('r5icon').textContent=q.icon;
+  document.getElementById('r5desc').textContent=q.desc;
+  const og=document.getElementById('r5opts');
+  og.innerHTML=q.opts.map((o,i)=>`<button class="opt" onclick="r5ans(${i})">${o}</button>`).join('');
+}
+function r5ans(i){
+  const q=r5qs[r5idx];
+  document.querySelectorAll('#r5opts .opt').forEach(b=>b.disabled=true);
+  if(i===q.ans){
+    document.querySelectorAll('#r5opts .opt')[i].classList.add('correct');
+    showFeedback('r5fb',true,'✅ Correct! +15 points');
+    addScore(15);
+  } else {
+    document.querySelectorAll('#r5opts .opt')[i].classList.add('wrong');
+    document.querySelectorAll('#r5opts .opt')[q.ans].classList.add('correct');
+    showFeedback('r5fb',false,'❌ Wrong — +15s penalty');
+    addPenalty();
+  }
+  setTimeout(()=>{
+    r5idx++;
+    document.getElementById('r5fb').className='feedback';
+    if(r5idx<r5qs.length){renderR5();}
+    else{
+      document.getElementById('r5info').style.display='block';
+      unlockDoor('r5door','r5next');
+    }
+  },1200);
+}
+
+// ── ROOM 6 ────────────────────────────────────────────────────
+const r6qs=[
+  {desc:'In the double-slit experiment without a detector, what pattern appears on the screen?',ans:0,opts:['An interference pattern','Two bright lines','A single bright spot','Random dots']},
+  {desc:'Einstein\'s explanation of the photoelectric effect proved that light behaves as a particle. What are these light particles called?',ans:2,opts:['Electrons','Neutrons','Photons','Protons']},
+  {desc:'De Broglie proposed that all particles have a wavelength. His equation is λ = h/p. What does "p" stand for?',ans:1,opts:['Power','Momentum','Pressure','Position']},
+];
+let r6idx=0;
+
+function initR6(){r6idx=0;renderR6();}
+function renderR6(){
+  if(r6idx>=r6qs.length)return;
+  const q=r6qs[r6idx];
+  document.getElementById('r6num').textContent=r6idx+1;
+  document.getElementById('r6desc').textContent=q.desc;
+  const og=document.getElementById('r6opts');
+  og.innerHTML=q.opts.map((o,i)=>`<button class="opt" onclick="r6ans(${i})">${o}</button>`).join('');
+}
+function r6ans(i){
+  const q=r6qs[r6idx];
+  document.querySelectorAll('#r6opts .opt').forEach(b=>b.disabled=true);
+  if(i===q.ans){
+    document.querySelectorAll('#r6opts .opt')[i].classList.add('correct');
+    showFeedback('r6fb',true,'✅ Correct! +20 points');
+    addScore(20);
+  } else {
+    document.querySelectorAll('#r6opts .opt')[i].classList.add('wrong');
+    document.querySelectorAll('#r6opts .opt')[q.ans].classList.add('correct');
+    showFeedback('r6fb',false,'❌ Wrong — +15s penalty');
+    addPenalty();
+  }
+  setTimeout(()=>{
+    r6idx++;
+    document.getElementById('r6fb').className='feedback';
+    if(r6idx<r6qs.length){renderR6();}
+    else{
+      document.getElementById('r6info').style.display='block';
+      unlockDoor('r6door','r6next');
+    }
+  },1200);
+}
+
+// ── WIN ────────────────────────────────────────────────────────
+function showWin(){
+  clearInterval(timerInterval);
+  const elapsed=getElapsed()+penalties;
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  const timeStr=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  document.querySelectorAll('.screen').forEach(sc=>sc.classList.remove('active'));
+  document.getElementById('sWin').classList.add('active');
+  document.getElementById('winScore').textContent=totalScore;
+  document.getElementById('winTime').textContent=timeStr;
+  const badge=document.getElementById('winBadge');
+  if(totalScore>=180){badge.textContent='🏆 Physics Master';badge.style.cssText='background:#fff8e1;color:#c78900;border:1px solid #ffe066;';}
+  else if(totalScore>=130){badge.textContent='⭐ Great Work';badge.style.cssText='background:#f0fbf4;color:#2f9e44;border:1px solid #b2f2c9;';}
+  else{badge.textContent='💪 Keep Studying';badge.style.cssText='background:#f0f3ff;color:#3a54c4;border:1px solid #d0d9ff;';}
+  window.scrollTo(0,0);
+}
+
+function restartGame(){
+  totalScore=0;penalties=0;
+  document.getElementById('scoreDisplay').textContent='0 pts';
+  document.getElementById('timerDisplay').textContent='00:00';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s0').classList.add('active');
+  document.querySelectorAll('.opt').forEach(b=>{b.disabled=false;b.className='opt';});
+  document.querySelectorAll('.feedback').forEach(f=>f.className='feedback');
+  document.querySelectorAll('.info').forEach(f=>{if(f.id)f.style.display='none';});
+  document.querySelectorAll('.door').forEach(d=>{d.className='door';d.innerHTML='<div class="door-emoji">🔒</div><p>Solve the puzzle to unlock the door</p>';});
+  document.querySelectorAll('[id$="next"]').forEach(b=>b.style.display='none');
+  document.getElementById('r3input').value='';
+}
+</script>
+</body>
+</html>
